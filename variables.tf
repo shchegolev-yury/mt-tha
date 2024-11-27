@@ -29,6 +29,6 @@ variable "base_url" {
 
 variable "log_level" {
   description = "App log level."
-  type = string
-  default = "INFO"
+  type        = string
+  default     = "INFO"
 }
