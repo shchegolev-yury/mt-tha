@@ -1,0 +1,49 @@
+application:
+  max_connections: 5
+  baseURL: "minikube.com"
+  logLevel: "DEBUG"
+  port: 5000
+  image: cardiffc/mt
+  imageTag: 4
+annotations:
+  "project": "myTomorrows Home Assignment"
+specParams:
+  strategy:
+    type: RollingUpdate
+    maxSurge: 2
+    maxUnavailable: 2
+  resources:
+    prod:
+      limits:
+        cpu: 4m
+        memory: 8Gi
+      requests:
+        cpu: 2
+        memory: 4Gi
+    staging:
+      limits:
+        cpu: 400m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 400Mi
+    dev:
+      limits:
+        cpu: 200m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+autoscalingParams:
+  prod:
+    minReplicas: 3
+    maxReplicas: 12
+  staging:
+    minReplicas: 3
+    maxReplicas: 6
+  dev:
+    minReplicas: 2
+    maxReplicas: 2
+  cpuTh: 80
+
+env: dev

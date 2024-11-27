@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+data:
+  LOG_LEVEL: {{ .Values.application.logLevel | quote }}
+  MAX_CONNECTIONS: {{ .Values.application.max_connections | quote }}
+  API_BASE_URL: {{ .Values.application.baseURL | quote }}

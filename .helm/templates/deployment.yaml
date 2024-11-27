@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+  annotations:
+  {{- with .Values.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.autoscalingParams.dev.minReplicas }}
+  strategy:
+    type: {{ .Values.specParams.strategy.type }}
+    {{- if eq .Values.specParams.strategy.type "RollingUpdate"}}
+    rollingUpdate:
+      maxSurge: {{ .Values.specParams.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.specParams.strategy.maxUnavailable }}
+    {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      name: {{ .Chart.Name }}
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: {{ .Chart.Name }}
+              weight: 100
+      {{- if .Values.specParams.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.specParams.imagePullSecrets }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.application.image }}:{{ .Values.application.imageTag}}
+          imagePullPolicy: {{ .Values.imagePullPolicy | default "Always"}}
+          env:
+            - name: API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: API_BASE_URL
+                  name: {{ .Chart.Name }}
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  key: LOG_LEVEL
+                  name: {{ .Chart.Name }}
+            - name: MAX_CONNECTIONS
+              valueFrom:
+                configMapKeyRef:
+                  key: MAX_CONNECTIONS
+                  name: {{ .Chart.Name }}
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: SECRET_KEY
+                  name: {{ .Chart.Name }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: DB_PASSWORD
+                  name: {{ .Chart.Name }}
+          resources:
+            {{- if eq .Values.env "prod" }}
+            {{- toYaml .Values.specParams.resources.prod | nindent 12 }}
+            {{- else if eq .Values.env "staging" }}
+            {{- toYaml .Values.specParams.resources.staging | nindent 12 }}
+            {{- else }}
+            {{- toYaml .Values.specParams.resources.dev | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.application.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              port: {{ .Values.application.port }}
+              path: /health
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              port: {{ .Values.application.port }}
+              path: /ready
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+      restartPolicy: Always
